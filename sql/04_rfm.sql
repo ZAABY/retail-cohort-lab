@@ -1,4 +1,5 @@
 -- RFM segmentation: recency, frequency, monetary value, scored 1-5 with NTILE.
+-- customer_id breaks NTILE ties so scoring is deterministic across runs.
 CREATE OR REPLACE VIEW rfm_base AS
 SELECT
     customer_id,
@@ -11,9 +12,9 @@ GROUP BY customer_id;
 CREATE OR REPLACE VIEW rfm_scored AS
 SELECT
     *,
-    ntile(5) OVER (ORDER BY recency_days DESC)  AS r_score,   -- 5 = most recent
-    ntile(5) OVER (ORDER BY frequency)          AS f_score,
-    ntile(5) OVER (ORDER BY monetary)           AS m_score
+    ntile(5) OVER (ORDER BY recency_days DESC, customer_id)  AS r_score,   -- 5 = most recent
+    ntile(5) OVER (ORDER BY frequency, customer_id)          AS f_score,
+    ntile(5) OVER (ORDER BY monetary, customer_id)           AS m_score
 FROM rfm_base;
 
 CREATE OR REPLACE VIEW rfm_segments AS
