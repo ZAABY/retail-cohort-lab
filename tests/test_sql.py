@@ -32,9 +32,9 @@ def con():
 
 
 def test_cleaning_drops_returns_fees_and_free_rows(con):
-    assert con.sql("SELECT count(*) FROM sales").fetchone()[0] == 5
-    assert con.sql("SELECT count(*) FROM returns").fetchone()[0] == 1
-    assert con.sql("SELECT sum(revenue) FROM sales").fetchone()[0] == pytest.approx(2 * 5 + 5 + 10 + 2.5 + 5)
+    assert con.sql("SELECT count(*) FROM sales").fetchall()[0][0] == 5
+    assert con.sql("SELECT count(*) FROM returns").fetchall()[0][0] == 1
+    assert con.sql("SELECT sum(revenue) FROM sales").fetchall()[0][0] == pytest.approx(2 * 5 + 5 + 10 + 2.5 + 5)
 
 
 def test_monthly_kpis(con):
@@ -58,6 +58,24 @@ def test_cohort_ltv_is_cumulative(con):
 
 
 def test_rfm_covers_every_customer_once(con):
-    assert con.sql("SELECT count(*) FROM rfm_segments").fetchone()[0] == 3
-    assert con.sql("SELECT count(DISTINCT customer_id) FROM rfm_segments").fetchone()[0] == 3
-    assert con.sql("SELECT sum(pct_customers) FROM segment_summary").fetchone()[0] == pytest.approx(100.0, abs=0.2)
+    assert con.sql("SELECT count(*) FROM rfm_segments").fetchall()[0][0] == 3
+    assert con.sql("SELECT count(DISTINCT customer_id) FROM rfm_segments").fetchall()[0][0] == 3
+    assert con.sql("SELECT sum(pct_customers) FROM segment_summary").fetchall()[0][0] == pytest.approx(100.0, abs=0.2)
+
+
+def test_rfm_ntile_ties_break_on_customer_id():
+    """Five customers with identical recency/frequency/monetary must get
+    deterministic, distinct NTILE buckets ordered by customer_id."""
+    rows = [
+        (str(i), "A", "widget", 1, "2024-01-05 10:00", 5.0, i, "UK")
+        for i in range(1, 6)
+    ]
+    df = pd.DataFrame(rows, columns=["invoice", "stock_code", "description", "quantity", "invoice_ts", "unit_price", "customer_id", "country"])
+    df["invoice_ts"] = pd.to_datetime(df["invoice_ts"])
+    c = duckdb.connect()
+    c.execute("CREATE TABLE raw_sales AS SELECT * FROM df")
+    c.execute((SQL_DIR / "01_clean.sql").read_text())
+    c.execute((SQL_DIR / "04_rfm.sql").read_text())
+    got = c.sql("SELECT customer_id, r_score, f_score, m_score FROM rfm_scored ORDER BY customer_id").fetchall()
+    # All metrics tie, so every score column must be exactly customer order 1..5.
+    assert got == [(i, i, i, i) for i in range(1, 6)]
