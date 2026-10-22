@@ -47,7 +47,7 @@ pytest
 
 - Rows without a customer id are excluded from cohorts and RFM, so retention is for identified (mostly registered) customers only.
 - Two years of data means later cohort months rest on few cohorts.
-- RFM thresholds are quantile based and describe this dataset, not a general rule. NTILE ties do not currently use a stable customer-ID tie-break, so exact segment memberships and counts can vary across runs. The saved segment figure is one run, not an exact reproducibility guarantee.
+- RFM thresholds are quantile based and describe this dataset, not a general rule. NTILE ties now break on customer ID, so scores and segment counts are identical on every run. The saved segment figure was generated before that fix, so a few borderline customers may sit one bucket off.
 - No causal claims: this is descriptive.
 
 MIT licensed.
