@@ -28,7 +28,7 @@ kpis = con.sql("SELECT * FROM monthly_kpis ORDER BY month").df()
 c1, c2, c3 = st.columns(3)
 c1.metric("Revenue (GBP)", f"{kpis['revenue'].sum():,.0f}")
 c2.metric("Orders", f"{int(kpis['orders'].sum()):,}")
-c3.metric("Identified customers", f"{con.sql('SELECT count(*) FROM first_purchase').fetchone()[0]:,}")
+c3.metric("Identified customers", f"{con.sql('SELECT count(*) FROM first_purchase').fetchall()[0][0]:,}")
 
 tab1, tab2, tab3 = st.tabs(["Revenue", "Cohorts", "RFM segments"])
 
